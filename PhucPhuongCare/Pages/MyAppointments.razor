@@ -1,0 +1,98 @@
+﻿@page "/my-appointments"
+@attribute [Authorize]
+
+@using System.Security.Claims
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.CoreBusiness.Enums
+@using PhucPhuongCare.UseCases.AppointmentsUseCases
+@inject IViewMyAppointmentsUseCase ViewMyAppointmentsUseCase
+@inject ICancelAppointmentUseCase CancelAppointmentUseCase
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Lịch hẹn của tôi</PageTitle>
+
+<h3>Lịch hẹn của tôi</h3>
+
+@if (appointments == null)
+{
+    <p><em>Đang tải dữ liệu...</em></p>
+}
+else if (!appointments.Any())
+{
+    <p>Bạn chưa có lịch hẹn nào. <a href="/specialties">Đặt lịch ngay!</a></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Bác sĩ</th>
+                <th>Chuyên khoa</th>
+                <th>Ngày giờ hẹn</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var appt in appointments)
+            {
+                <tr>
+                    <td>@appt.Doctor?.FullName</td>
+                    <td>@appt.Doctor?.Specialty?.Name</td>
+                    <td>@appt.TimeSlot?.SlotDateTime.ToString("HH:mm, dd/MM/yyyy")</td>
+                    <td>
+                        @* Thêm màu sắc cho trạng thái *@
+                        @if(appt.Status == AppointmentStatus.Confirmed)
+                        {
+                            <span class="badge bg-success">@appt.Status</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">@appt.Status</span>
+                        }
+                    </td>
+                    <td>
+                        @* Chỉ hiển thị nút Hủy cho các lịch hẹn đã xác nhận *@
+                        @if(appt.Status == AppointmentStatus.Confirmed)
+                        {
+                            <button class="btn btn-sm btn-danger" @onclick="() => HandleCancelAppointment(appt.Id)">Hủy lịch</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Appointment>? appointments;
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            await LoadAppointments();
+        }
+    }
+
+    private async Task LoadAppointments()
+    {
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            var result = await ViewMyAppointmentsUseCase.ExecuteAsync(currentUserId);
+            appointments = result.ToList();
+        }
+    }
+
+    private async Task HandleCancelAppointment(int appointmentId)
+    {
+        await CancelAppointmentUseCase.ExecuteAsync(appointmentId);
+        // Tải lại danh sách để cập nhật trạng thái mới
+        await LoadAppointments();
+    }
+}

@@ -1,0 +1,85 @@
+﻿@page "/doctors/edit/{DoctorId:int}"
+
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.UseCases.DoctorsUseCases
+@using PhucPhuongCare.UseCases.SpecialtiesUseCases
+
+@inject IViewDoctorByIdUseCase ViewDoctorByIdUseCase
+@inject IAdminUpdateDoctorUseCase AdminUpdateDoctorUseCase
+@inject IViewSpecialtiesUseCase ViewSpecialtiesUseCase
+@inject NavigationManager NavigationManager
+
+<h3>Chỉnh sửa thông tin Bác sĩ</h3>
+
+@if (doctorToEdit == null)
+{
+    <p><em>Đang tải thông tin...</em></p>
+}
+else
+{
+    <EditForm Model="doctorToEdit" OnValidSubmit="HandleUpdateDoctor">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="fullName" class="form-label">Họ và tên</label>
+            <InputText id="fullName" @bind-Value="doctorToEdit.FullName" class="form-control"></InputText>
+        </div>
+
+        <div class="mb-3">
+            <label for="degree" class="form-label">Bằng cấp</label>
+            <InputText id="degree" @bind-Value="doctorToEdit.Degree" class="form-control"></InputText>
+        </div>
+
+        <div class="mb-3">
+            <label for="specialty" class="form-label">Chuyên khoa</label>
+            <InputSelect @bind-Value="doctorToEdit.SpecialtyId" class="form-select">
+                @if (specialties != null)
+                {
+                    @foreach (var specialty in specialties)
+                    {
+                        <option value="@specialty.Id">@specialty.Name</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label for="bio" class="form-label">Tiểu sử</label>
+            <InputTextArea id="bio" @bind-Value="doctorToEdit.Bio" class="form-control" rows="4"></InputTextArea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Hủy</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int DoctorId { get; set; }
+
+    private Doctor? doctorToEdit;
+    private IEnumerable<Specialty>? specialties;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Tải danh sách chuyên khoa để hiển thị trong dropdown
+        specialties = await ViewSpecialtiesUseCase.ExecuteAsync();
+        // Tải thông tin của bác sĩ cần sửa
+        doctorToEdit = await ViewDoctorByIdUseCase.ExecuteAsync(DoctorId);
+    }
+
+    private async Task HandleUpdateDoctor()
+    {
+        if (doctorToEdit != null)
+        {
+            await AdminUpdateDoctorUseCase.ExecuteAsync(doctorToEdit);
+            NavigationManager.NavigateTo("/doctors");
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/doctors");
+    }
+}

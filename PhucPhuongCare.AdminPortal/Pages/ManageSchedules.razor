@@ -1,0 +1,158 @@
+﻿@page "/doctors/schedules/{DoctorId:int}"
+
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.UseCases.DoctorsUseCases
+@using PhucPhuongCare.UseCases.SchedulesUseCases
+@inject IViewDoctorByIdUseCase ViewDoctorByIdUseCase
+@inject IAdminViewSchedulesUseCase AdminViewSchedulesUseCase
+@inject IAdminAddScheduleUseCase AdminAddScheduleUseCase
+@inject IAdminDeleteScheduleUseCase AdminDeleteScheduleUseCase
+@inject NavigationManager NavigationManager
+
+<PageTitle>Quản lý Lịch làm việc</PageTitle>
+
+@if (doctor == null)
+{
+    <p><em>Đang tải...</em></p>
+}
+else
+{
+    <h3>Quản lý Lịch làm việc cho: @doctor.FullName</h3>
+
+    <div class="mt-3 mb-3">
+        <button class="btn btn-secondary" @onclick="GoBack">&laquo; Quay lại Danh sách Bác sĩ</button>
+    </div>
+
+    <hr />
+
+    <h4>Các lịch đã có</h4>
+    @if (schedules == null || !schedules.Any())
+    {
+        <p><em>Chưa có lịch làm việc nào.</em></p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Thứ</th>
+                    <th>Bắt đầu</th>
+                    <th>Kết thúc</th>
+                    <th>Thời lượng ca (phút)</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var schedule in schedules)
+                {
+                    <tr>
+                        <td>@GetDayName(schedule.DayOfWeek)</td>
+                        <td>@schedule.StartTime.ToString(@"hh\:mm")</td>
+                        <td>@schedule.EndTime.ToString(@"hh\:mm")</td>
+                        <td>@schedule.SlotDurationMinutes</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" @onclick="() => HandleDeleteSchedule(schedule.Id)">Xóa</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <hr />
+    <h4>Thêm lịch làm việc mới</h4>
+    <EditForm Model="newSchedule" OnValidSubmit="HandleAddSchedule" FormName="AddScheduleForm">
+        <DataAnnotationsValidator />
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Ngày trong tuần</label>
+                <InputSelect @bind-Value="newSchedule.DayOfWeek" class="form-select">
+                    @foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
+                    {
+                        <option value="@day">@GetDayName(day)</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Giờ bắt đầu</label>
+                <InputDate @bind-Value="startTime" Type="InputDateType.Time" class="form-control" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Giờ kết thúc</label>
+                <InputDate @bind-Value="endTime" Type="InputDateType.Time" class="form-control" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Thời lượng ca (phút)</label>
+                <InputNumber @bind-Value="newSchedule.SlotDurationMinutes" class="form-control" />
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Thêm lịch</button>
+    </EditForm>
+}
+
+
+@code {
+    [Parameter]
+    public int DoctorId { get; set; }
+
+    private Doctor? doctor;
+    private List<DoctorSchedule>? schedules;
+    private DoctorSchedule newSchedule = new() { DayOfWeek = DayOfWeek.Monday, SlotDurationMinutes = 30 };
+
+    private DateTime startTime = DateTime.Today.AddHours(8);
+    private DateTime endTime = DateTime.Today.AddHours(12);
+
+    protected override async Task OnInitializedAsync()
+    {
+        doctor = await ViewDoctorByIdUseCase.ExecuteAsync(DoctorId);
+        await LoadSchedules();
+    }
+
+    private async Task LoadSchedules()
+    {
+        var result = await AdminViewSchedulesUseCase.ExecuteAsync(DoctorId);
+        schedules = result.ToList();
+    }
+
+    private async Task HandleAddSchedule()
+    {
+        newSchedule.DoctorId = DoctorId;
+        newSchedule.StartTime = startTime.TimeOfDay;
+        newSchedule.EndTime = endTime.TimeOfDay;
+        newSchedule.IsActive = true;
+
+        await AdminAddScheduleUseCase.ExecuteAsync(newSchedule);
+
+        newSchedule = new() { DayOfWeek = DayOfWeek.Monday, SlotDurationMinutes = 30 };
+        await LoadSchedules();
+    }
+
+    private async Task HandleDeleteSchedule(int scheduleId)
+    {
+        await AdminDeleteScheduleUseCase.ExecuteAsync(scheduleId);
+        await LoadSchedules();
+    }
+
+    // =============================================
+    // HÀM MỚI ĐƯỢC THÊM VÀO
+    // =============================================
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/doctors");
+    }
+
+    private string GetDayName(DayOfWeek day)
+    {
+        return day switch
+        {
+            DayOfWeek.Monday => "Thứ Hai",
+            DayOfWeek.Tuesday => "Thứ Ba",
+            DayOfWeek.Wednesday => "Thứ Tư",
+            DayOfWeek.Thursday => "Thứ Năm",
+            DayOfWeek.Friday => "Thứ Sáu",
+            DayOfWeek.Saturday => "Thứ Bảy",
+            DayOfWeek.Sunday => "Chủ Nhật",
+            _ => ""
+        };
+    }
+}

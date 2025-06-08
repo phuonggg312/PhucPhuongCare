@@ -1,0 +1,48 @@
+﻿@page "/all-appointments"
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.UseCases.AppointmentsUseCases
+@inject IAdminViewAllAppointmentsUseCase AdminViewAllAppointmentsUseCase
+
+<PageTitle>Quản lý Lịch hẹn</PageTitle>
+
+<h3>Toàn bộ Lịch hẹn</h3>
+
+@if (allAppointments == null)
+{
+    <p><em>Đang tải dữ liệu...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Bác sĩ</th>
+                <th>Bệnh nhân (ID)</th>
+                <th>Ngày giờ hẹn</th>
+                <th>Lý do khám</th>
+                <th>Trạng thái</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var appt in allAppointments)
+            {
+                <tr>
+                    <td>@appt.Doctor?.FullName</td>
+                    <td>@appt.PatientId</td>
+                    <td>@appt.TimeSlot?.SlotDateTime.ToString("HH:mm, dd/MM/yyyy")</td>
+                    <td>@appt.ReasonForVisit</td>
+                    <td><span class="badge bg-success">@appt.Status</span></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IEnumerable<Appointment>? allAppointments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        allAppointments = await AdminViewAllAppointmentsUseCase.ExecuteAsync();
+    }
+}

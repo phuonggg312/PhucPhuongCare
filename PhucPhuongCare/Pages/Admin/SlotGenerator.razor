@@ -1,0 +1,51 @@
+﻿@page "/admin/slot-generator"
+@using PhucPhuongCare.UseCases.TimeSlotsUseCases
+@inject IGenerateTimeSlotsUseCase GenerateTimeSlotsUseCase
+
+<PageTitle>Công cụ Sinh Khung giờ</PageTitle>
+
+<h3>Công cụ Sinh Khung giờ (Tạm thời)</h3>
+<p>Chức năng này sẽ sinh ra các khung giờ cho một bác sĩ trong 30 ngày tới.</p>
+
+<div class="mb-3">
+    <label for="doctorId" class="form-label">Nhập ID Bác sĩ:</label>
+    <input id="doctorId" type="number" class="form-control" @bind="doctorId" />
+</div>
+
+<button class="btn btn-success" @onclick="HandleGenerateSlots" disabled="@isProcessing">
+    @if (isProcessing)
+    {
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span> Đang xử lý...</span>
+    }
+    else
+    {
+        <span>Bắt đầu Sinh Khung giờ</span>
+    }
+</button>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-info mt-3">@message</div>
+}
+
+
+@code {
+    private int doctorId = 1; // Mặc định là bác sĩ có ID 1
+    private string message = string.Empty;
+    private bool isProcessing = false;
+
+    private async Task HandleGenerateSlots()
+    {
+        isProcessing = true;
+        message = "Đang sinh khung giờ, vui lòng đợi...";
+
+        var startDate = DateTime.Today;
+        var endDate = DateTime.Today.AddDays(30);
+
+        await GenerateTimeSlotsUseCase.ExecuteAsync(doctorId, startDate, endDate);
+
+        message = $"Hoàn thành! Đã sinh các khung giờ cho Bác sĩ ID={doctorId} từ {startDate:dd/MM/yyyy} đến {endDate:dd/MM/yyyy}.";
+        isProcessing = false;
+    }
+}

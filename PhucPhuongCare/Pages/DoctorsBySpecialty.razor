@@ -1,0 +1,67 @@
+﻿@page "/doctors/{SpecialtyId:int}"
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.UseCases.DoctorsUseCases
+@inject IViewDoctorsBySpecialtyUseCase ViewDoctorsBySpecialtyUseCase
+@inject NavigationManager NavigationManager
+
+<PageTitle>Danh sách Bác sĩ</PageTitle>
+
+<div class="mb-3">
+    <button class="btn btn-secondary" @onclick="GoBack">
+        &laquo; Quay lại Chuyên khoa
+    </button>
+</div>
+
+<h3>Danh sách Bác sĩ</h3>
+
+@if (doctors == null)
+{
+    <p><em>Đang tải danh sách bác sĩ...</em></p>
+}
+else if (!doctors.Any())
+{
+    <p><em>Chưa có bác sĩ nào cho chuyên khoa này.</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Họ và tên</th>
+                <th>Bằng cấp</th>
+                <th>Tiểu sử</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var doctor in doctors)
+            {
+                <tr>
+                    <td>@doctor.FullName</td>
+                    <td>@doctor.Degree</td>
+                    <td>@doctor.Bio</td>
+                    <td>
+                        <a href="/doctor/@doctor.Id" class="btn btn-primary">Đặt lịch</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter]
+    public int SpecialtyId { get; set; }
+
+    private IEnumerable<Doctor>? doctors;
+
+    protected override async Task OnInitializedAsync()
+    {
+        doctors = await ViewDoctorsBySpecialtyUseCase.ExecuteAsync(SpecialtyId);
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/specialties");
+    }
+}

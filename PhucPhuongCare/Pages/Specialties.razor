@@ -1,0 +1,49 @@
+﻿@page "/specialties"
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.UseCases.SpecialtiesUseCases
+@inject IViewSpecialtiesUseCase ViewSpecialtiesUseCase
+
+<PageTitle>Danh sách Chuyên khoa</PageTitle>
+
+<h3>Danh sách Chuyên khoa</h3>
+
+@if (specialties == null)
+{
+    <p><em>Đang tải dữ liệu...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tên chuyên khoa</th>
+                <th>Mô tả</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var specialty in specialties)
+            {
+                <tr>
+                    <td>@specialty.Id</td>
+                    <td>@specialty.Name</td>
+                    <td>@specialty.Description</td>
+                    <td>
+                        <a href="/doctors/@specialty.Id">Xem bác sĩ</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IEnumerable<Specialty>? specialties;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Gọi Use Case để lấy dữ liệu khi trang được tải
+        specialties = await ViewSpecialtiesUseCase.ExecuteAsync();
+    }
+}

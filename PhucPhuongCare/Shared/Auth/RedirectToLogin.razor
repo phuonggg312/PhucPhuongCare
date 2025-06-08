@@ -1,0 +1,23 @@
+﻿@inject NavigationManager NavigationManager
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Tạo một đối tượng Uri để dễ dàng lấy đường dẫn tương đối
+            var uri = new Uri(NavigationManager.Uri);
+            var relativePath = uri.AbsolutePath; // Sẽ lấy ra "/my-appointments" hoặc "/doctor/1"
+
+            // Chỉ chuyển hướng nếu không phải đang ở trang Login
+            if (!relativePath.Contains("Identity/Account/Login"))
+            {
+                // Uri.EscapeDataString để đảm bảo URL an toàn khi truyền đi
+                var returnUrl = Uri.EscapeDataString(relativePath);
+                NavigationManager.NavigateTo($"Identity/Account/Login?returnUrl={returnUrl}", true);
+            }
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+}

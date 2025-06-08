@@ -1,0 +1,76 @@
+﻿@page "/doctors/add"
+
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.UseCases.DoctorsUseCases
+@using PhucPhuongCare.UseCases.SpecialtiesUseCases
+
+@inject IAdminAddDoctorUseCase AdminAddDoctorUseCase
+@inject IViewSpecialtiesUseCase ViewSpecialtiesUseCase
+@inject NavigationManager NavigationManager
+
+<h3>Thêm Bác sĩ mới</h3>
+
+@if (doctor != null)
+{
+    <EditForm Model="doctor" OnValidSubmit="HandleAddDoctor">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="fullName" class="form-label">Họ và tên</label>
+            <InputText id="fullName" @bind-Value="doctor.FullName" class="form-control"></InputText>
+        </div>
+
+        <div class="mb-3">
+            <label for="degree" class="form-label">Bằng cấp</label>
+            <InputText id="degree" @bind-Value="doctor.Degree" class="form-control"></InputText>
+        </div>
+
+        <div class="mb-3">
+            <label for="specialty" class="form-label">Chuyên khoa</label>
+            <InputSelect @bind-Value="doctor.SpecialtyId" class="form-select">
+                <option value="0">-- Chọn chuyên khoa --</option>
+                @if (specialties != null)
+                {
+                    @foreach (var specialty in specialties)
+                    {
+                        <option value="@specialty.Id">@specialty.Name</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label for="bio" class="form-label">Tiểu sử</label>
+            <InputTextArea id="bio" @bind-Value="doctor.Bio" class="form-control" rows="4"></InputTextArea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Lưu</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Hủy</button>
+    </EditForm>
+}
+
+@code {
+    private Doctor doctor = new Doctor();
+    private IEnumerable<Specialty>? specialties;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Tải danh sách chuyên khoa để hiển thị trong dropdown
+        specialties = await ViewSpecialtiesUseCase.ExecuteAsync();
+
+        // Gán một giá trị tạm thời, sau này sẽ thay bằng việc chọn User thật
+        doctor.ApplicationUserId = "TEMP-USER-ID-" + Guid.NewGuid().ToString();
+    }
+
+    private async Task HandleAddDoctor()
+    {
+        await AdminAddDoctorUseCase.ExecuteAsync(doctor);
+        NavigationManager.NavigateTo("/doctors");
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/doctors");
+    }
+}
