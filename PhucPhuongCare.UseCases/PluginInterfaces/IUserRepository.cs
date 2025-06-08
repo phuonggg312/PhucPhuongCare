@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Microsoft.AspNetCore.Identity;
 using System.Threading.Tasks;
 
 namespace PhucPhuongCare.UseCases.PluginInterfaces
 {
-    internal interface IUserRepository
+    public interface IUserRepository // << Đã đổi thành public
     {
+        Task<string> GetPatientEmailByIdAsync(string id);
+        Task<IdentityUser> GetUserByIdAsync(string id);
     }
 }

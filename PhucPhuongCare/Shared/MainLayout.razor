@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>PhucPhuongCare</PageTitle>
 
@@ -8,7 +9,15 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
+        <div class="top-row px-4 auth">
+            @if (userIsAdmin)
+            {
+                <a href="https://localhost:7182" target="_blank" class="nav-link btn btn-sm btn-warning text-dark mx-2">
+                    <span class="oi oi-cog" aria-hidden="true"></span> Vào trang Admin
+                </a>
+            }
+
+            <LoginDisplay />
             <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
         </div>
 
@@ -17,3 +26,24 @@
         </article>
     </main>
 </div>
+
+@code {
+    private bool userIsAdmin = false;
+
+    // Sử dụng OnParametersSetAsync ổn định hơn trong layout
+    protected override async Task OnParametersSetAsync()
+    {
+        // Lấy trạng thái đăng nhập
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Kiểm tra xem user có tồn tại và có vai trò là "Admin" không
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            if (user.IsInRole("Admin"))
+            {
+                userIsAdmin = true;
+            }
+        }
+    }
+}

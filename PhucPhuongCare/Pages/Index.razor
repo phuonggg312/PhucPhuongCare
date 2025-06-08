@@ -1,9 +1,32 @@
 ﻿@page "/"
+@using System.Security.Claims
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Trang chủ - Debug</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Kiểm tra Quyền Đăng nhập</h1>
 
-Welcome to your new app.
+<AuthorizeView>
+    <Authorized>
+        <div class="alert alert-info mt-4">
+            <h4>Debug Thông tin Đăng nhập</h4>
+            <hr>
+            <p><strong>Tên người dùng:</strong> @context.User.Identity?.Name</p>
+            <p><strong>Trạng thái xác thực:</strong> @context.User.Identity?.IsAuthenticated</p>
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+            <h5 class="mt-3">Các vai trò (Roles) được tìm thấy:</h5>
+            <ul>
+                @foreach (var claim in context.User.FindAll(ClaimTypes.Role))
+                {
+                    <li style="font-weight: bold; color: green;">@claim.Value</li>
+                }
+                @if (!context.User.Claims.Any(c => c.Type == ClaimTypes.Role))
+                {
+                    <li style="font-weight: bold; color: red;">Không tìm thấy vai trò nào!</li>
+                }
+            </ul>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p class="alert alert-warning">Bạn chưa đăng nhập. Vui lòng đăng nhập để kiểm tra.</p>
+    </NotAuthorized>
+</AuthorizeView>

@@ -1,0 +1,79 @@
+﻿@page "/my-profile"
+@attribute [Authorize]
+
+@using System.Security.Claims
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.UseCases.PatientProfilesUseCases
+@inject IViewMyProfileUseCase ViewMyProfileUseCase
+@inject ISaveMyProfileUseCase SaveMyProfileUseCase
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Hồ sơ của tôi</PageTitle>
+
+<h3>Hồ sơ của tôi</h3>
+
+@if (profile == null)
+{
+    <p><em>Đang tải hồ sơ...</em></p>
+}
+else
+{
+    <EditForm Model="profile" OnValidSubmit="HandleSaveProfile">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="email" class="form-label">Email đăng nhập</label>
+            <input id="email" class="form-control" value="@userEmail" readonly />
+        </div>
+
+        <div class="mb-3">
+            <label for="firstName" class="form-label">Tên</label>
+            <InputText id="firstName" @bind-Value="profile.FirstName" class="form-control"></InputText>
+        </div>
+
+        <div class="mb-3">
+            <label for="lastName" class="form-label">Họ</label>
+            <InputText id="lastName" @bind-Value="profile.LastName" class="form-control"></InputText>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+    </EditForm>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationStateTask { get; set; }
+
+    private PatientProfile? profile;
+    private string userEmail = string.Empty; // << THÊM BIẾN MỚI
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationStateTask == null) return;
+
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            userEmail = user.Identity.Name ?? string.Empty; // << LẤY EMAIL Ở ĐÂY
+
+            var patientId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(patientId))
+            {
+                profile = await ViewMyProfileUseCase.ExecuteAsync(patientId);
+            }
+        }
+    }
+
+    private async Task HandleSaveProfile()
+    {
+        if (profile != null)
+        {
+            await SaveMyProfileUseCase.ExecuteAsync(profile);
+            NavigationManager.NavigateTo("/");
+        }
+    }
+}
