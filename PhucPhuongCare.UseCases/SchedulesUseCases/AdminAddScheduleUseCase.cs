@@ -15,7 +15,8 @@ namespace PhucPhuongCare.UseCases.SchedulesUseCases
 
         public async Task ExecuteAsync(DoctorSchedule schedule)
         {
-            await _scheduleRepository.AddScheduleAsync(schedule);
+            // Thay vì gọi Add, bây giờ chúng ta gọi Save
+            await _scheduleRepository.SaveScheduleAsync(schedule);
         }
     }
 }

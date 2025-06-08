@@ -64,6 +64,8 @@ builder.Services.AddTransient<IViewMyAppointmentsUseCase, ViewMyAppointmentsUseC
 builder.Services.AddTransient<ICancelAppointmentUseCase, CancelAppointmentUseCase>();
 builder.Services.AddTransient<IViewMyProfileUseCase, ViewMyProfileUseCase>();
 builder.Services.AddTransient<ISaveMyProfileUseCase, SaveMyProfileUseCase>();
+builder.Services.AddTransient<IAdminViewAppointmentDetailUseCase, AdminViewAppointmentDetailUseCase>();
+
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();

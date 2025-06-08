@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 
 namespace PhucPhuongCare.UseCases.AppointmentsUseCases
 {
-    public class CancelAppointmentUseCase : ICancelAppointmentUseCase
+    public class AdminCancelAppointmentUseCase : IAdminCancelAppointmentUseCase
     {
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly ITimeSlotRepository _timeSlotRepository;
 
-        public CancelAppointmentUseCase(
+        public AdminCancelAppointmentUseCase(
             IAppointmentRepository appointmentRepository,
             ITimeSlotRepository timeSlotRepository) // Inject thêm
         {
@@ -19,12 +19,11 @@ namespace PhucPhuongCare.UseCases.AppointmentsUseCases
 
         public async Task ExecuteAsync(int appointmentId)
         {
-            // Lấy thông tin cuộc hẹn để biết TimeSlotId là gì
             var appointment = await _appointmentRepository.GetAppointmentByIdAsync(appointmentId);
             if (appointment == null) return;
 
-            // 1. Cập nhật trạng thái cuộc hẹn thành CanceledByPatient
-            await _appointmentRepository.UpdateAppointmentStatusAsync(appointmentId, AppointmentStatus.CanceledByPatient);
+            // 1. Cập nhật trạng thái cuộc hẹn thành CanceledByClinic
+            await _appointmentRepository.UpdateAppointmentStatusAsync(appointmentId, AppointmentStatus.CanceledByClinic);
 
             // 2. Cập nhật trạng thái của TimeSlot thành Available
             if (appointment.TimeSlotId > 0)

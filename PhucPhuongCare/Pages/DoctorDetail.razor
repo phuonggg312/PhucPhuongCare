@@ -1,15 +1,18 @@
 ﻿@page "/doctor/{DoctorId:int}"
-@attribute [Authorize] // Yêu cầu đăng nhập để vào trang này
+@attribute [Authorize]
 
 @using System.Security.Claims
 @using PhucPhuongCare.CoreBusiness.Models
 @using PhucPhuongCare.UseCases.AppointmentsUseCases
 @using PhucPhuongCare.UseCases.DoctorsUseCases
 @using PhucPhuongCare.UseCases.TimeSlotsUseCases
+@using PhucPhuongCare.UseCases.SchedulesUseCases
+@using Radzen.Blazor
 
 @inject IViewDoctorByIdUseCase ViewDoctorByIdUseCase
 @inject IViewAvailableTimeSlotsUseCase ViewAvailableTimeSlotsUseCase
 @inject IBookAppointmentUseCase BookAppointmentUseCase
+@inject IGenerateTimeSlotsUseCase GenerateTimeSlotsUseCase
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
@@ -31,7 +34,7 @@ else
     <div class="row">
         <div class="col-md-4">
             <h4>1. Chọn ngày khám</h4>
-            <RadzenDatePicker @bind-Value="selectedDate" Inline="true" Change="DateChanged" />
+            <RadzenDatePicker @bind-Value="selectedDate" Inline="true" Change="DateChanged" Min="@DateTime.Today" />
         </div>
         <div class="col-md-8">
             <h4>2. Chọn khung giờ còn trống</h4>
@@ -59,10 +62,9 @@ else
             @if (selectedTimeSlotId.HasValue)
             {
                 <div class="mt-4 p-3 border rounded">
-                    <h4>3. Xác nhận thông tin</h4>
-
                     <AuthorizeView>
                         <Authorized>
+                            <h4>3. Xác nhận thông tin</h4>
                             <p>Bạn đang đặt lịch với tài khoản: <strong>@context.User.Identity?.Name</strong></p>
 
                             <div class="mb-3">
@@ -82,9 +84,6 @@ else
                             </button>
                         </Authorized>
                         <NotAuthorized>
-                            <div class="alert alert-warning">
-                                Vui lòng <a href="Identity/Account/Login?returnUrl=@(NavigationManager.Uri)">đăng nhập</a> để hoàn tất đặt lịch.
-                            </div>
                         </NotAuthorized>
                     </AuthorizeView>
                 </div>
@@ -97,7 +96,6 @@ else
     [Parameter]
     public int DoctorId { get; set; }
 
-    // Dùng để lấy thông tin user từ AuthorizeView
     [CascadingParameter]
     private Task<AuthenticationState>? authenticationStateTask { get; set; }
 
@@ -109,6 +107,37 @@ else
     private string reasonForVisit = string.Empty;
     private bool isBooking = false;
 
+    protected override async Task OnInitializedAsync()
+    {
+        doctor = await ViewDoctorByIdUseCase.ExecuteAsync(DoctorId);
+        await DateChanged(DateTime.Today);
+    }
+
+    private async Task DateChanged(DateTime? newDate)
+    {
+        if (newDate.HasValue)
+        {
+            isLoadingSlots = true;
+            StateHasChanged();
+
+            selectedDate = newDate.Value;
+            selectedTimeSlotId = null;
+
+            await GenerateTimeSlotsUseCase.ExecuteAsync(DoctorId, selectedDate, selectedDate.AddDays(30));
+            await LoadAvailableSlots();
+
+            isLoadingSlots = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAvailableSlots()
+    {
+        availableSlots.Clear();
+        var result = await ViewAvailableTimeSlotsUseCase.ExecuteAsync(DoctorId, selectedDate);
+        availableSlots.AddRange(result);
+    }
+
     private void SelectTimeSlot(int timeSlotId)
     {
         if (selectedTimeSlotId == timeSlotId) selectedTimeSlotId = null;
@@ -118,17 +147,13 @@ else
     private async Task HandleConfirmBooking()
     {
         if (!selectedTimeSlotId.HasValue || authenticationStateTask == null) return;
-
         isBooking = true;
 
         var user = (await authenticationStateTask).User;
-
-        // Lấy ID thật của người dùng đang đăng nhập
         var patientId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(patientId))
         {
-            // Xử lý lỗi nếu không tìm thấy ID (dù đã đăng nhập)
             isBooking = false;
             return;
         }
@@ -136,37 +161,11 @@ else
         await BookAppointmentUseCase.ExecuteAsync(
             DoctorId,
             selectedTimeSlotId.Value,
-            patientId, // << Đã dùng ID thật
+            patientId,
             reasonForVisit
         );
 
         isBooking = false;
-        // Sau khi đặt lịch thành công, chuyển hướng đến trang xem lại lịch hẹn
         NavigationManager.NavigateTo("/my-appointments");
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        doctor = await ViewDoctorByIdUseCase.ExecuteAsync(DoctorId);
-        await LoadAvailableSlots();
-    }
-
-    private async Task DateChanged(DateTime? newDate)
-    {
-        if (newDate.HasValue)
-        {
-            selectedDate = newDate.Value;
-            selectedTimeSlotId = null;
-            await LoadAvailableSlots();
-        }
-    }
-
-    private async Task LoadAvailableSlots()
-    {
-        isLoadingSlots = true;
-        availableSlots.Clear();
-        var slots = await ViewAvailableTimeSlotsUseCase.ExecuteAsync(DoctorId, selectedDate);
-        availableSlots.AddRange(slots);
-        isLoadingSlots = false;
     }
 }

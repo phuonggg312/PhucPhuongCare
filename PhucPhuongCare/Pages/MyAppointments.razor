@@ -1,10 +1,10 @@
 ﻿@page "/my-appointments"
 @attribute [Authorize]
 
-@using System.Security.Claims
-@using PhucPhuongCare.CoreBusiness.Models
 @using PhucPhuongCare.CoreBusiness.Enums
 @using PhucPhuongCare.UseCases.AppointmentsUseCases
+@using System.Security.Claims
+
 @inject IViewMyAppointmentsUseCase ViewMyAppointmentsUseCase
 @inject ICancelAppointmentUseCase CancelAppointmentUseCase
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -13,49 +13,50 @@
 
 <h3>Lịch hẹn của tôi</h3>
 
-@if (appointments == null)
+@if (myAppointments == null)
 {
     <p><em>Đang tải dữ liệu...</em></p>
 }
-else if (!appointments.Any())
+else if (!myAppointments.Any())
 {
     <p>Bạn chưa có lịch hẹn nào. <a href="/specialties">Đặt lịch ngay!</a></p>
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
+    <table class="table table-hover">
+        <thead class="table-light">
             <tr>
                 <th>Bác sĩ</th>
                 <th>Chuyên khoa</th>
-                <th>Ngày giờ hẹn</th>
+                <th>Thời gian</th>
                 <th>Trạng thái</th>
-                <th>Hành động</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var appt in appointments)
+            @foreach (var appt in myAppointments)
             {
                 <tr>
                     <td>@appt.Doctor?.FullName</td>
                     <td>@appt.Doctor?.Specialty?.Name</td>
-                    <td>@appt.TimeSlot?.SlotDateTime.ToString("HH:mm, dd/MM/yyyy")</td>
                     <td>
-                        @* Thêm màu sắc cho trạng thái *@
-                        @if(appt.Status == AppointmentStatus.Confirmed)
-                        {
-                            <span class="badge bg-success">@appt.Status</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">@appt.Status</span>
-                        }
+                        @* BƯỚC 1: TẠO LINK ĐẾN TRANG CHI TIẾT *@
+                        <a href="/my-appointments/detail/@appt.Id">
+                            @appt.TimeSlot?.SlotDateTime.ToString("HH:mm, dd/MM/yyyy")
+                        </a>
                     </td>
                     <td>
-                        @* Chỉ hiển thị nút Hủy cho các lịch hẹn đã xác nhận *@
-                        @if(appt.Status == AppointmentStatus.Confirmed)
+                        @* BƯỚC 2: VIỆT HÓA TRẠNG THÁI *@
+                        <span class="badge @GetStatusClass(appt.Status)">
+                            @GetVietnameseStatus(appt.Status)
+                        </span>
+                    </td>
+                    <td>
+                        @if (appt.Status == AppointmentStatus.Confirmed)
                         {
-                            <button class="btn btn-sm btn-danger" @onclick="() => HandleCancelAppointment(appt.Id)">Hủy lịch</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => CancelAppointment(appt.Id)">
+                                Hủy lịch
+                            </button>
                         }
                     </td>
                 </tr>
@@ -64,35 +65,58 @@ else
     </table>
 }
 
+
 @code {
-    private List<Appointment>? appointments;
-    private string? currentUserId;
+    private IEnumerable<PhucPhuongCare.CoreBusiness.Models.Appointment>? myAppointments;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
+        var patientId = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
-        if (user.Identity != null && user.Identity.IsAuthenticated)
+        if (!string.IsNullOrEmpty(patientId))
         {
-            currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            await LoadAppointments();
+            myAppointments = await ViewMyAppointmentsUseCase.ExecuteAsync(patientId);
         }
     }
 
-    private async Task LoadAppointments()
-    {
-        if (!string.IsNullOrEmpty(currentUserId))
-        {
-            var result = await ViewMyAppointmentsUseCase.ExecuteAsync(currentUserId);
-            appointments = result.ToList();
-        }
-    }
-
-    private async Task HandleCancelAppointment(int appointmentId)
+    private async Task CancelAppointment(int appointmentId)
     {
         await CancelAppointmentUseCase.ExecuteAsync(appointmentId);
-        // Tải lại danh sách để cập nhật trạng thái mới
-        await LoadAppointments();
+        // Tải lại danh sách sau khi hủy
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var patientId = authState.User.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(patientId))
+        {
+            myAppointments = await ViewMyAppointmentsUseCase.ExecuteAsync(patientId);
+        }
+    }
+
+    // HÀM MỚI ĐỂ VIỆT HÓA TRẠNG THÁI
+    private string GetVietnameseStatus(AppointmentStatus status)
+    {
+        return status switch
+        {
+            AppointmentStatus.PendingConfirmation => "Chờ xác nhận",
+            AppointmentStatus.Confirmed => "Đã xác nhận",
+            AppointmentStatus.Completed => "Đã hoàn thành",
+            AppointmentStatus.CanceledByPatient => "Bạn đã hủy",
+            AppointmentStatus.CanceledByClinic => "Phòng khám hủy",
+            AppointmentStatus.NoShow => "Không đến",
+            _ => status.ToString()
+        };
+    }
+
+    private string GetStatusClass(AppointmentStatus status)
+    {
+        return status switch
+        {
+            AppointmentStatus.Confirmed => "bg-success",
+            AppointmentStatus.Completed => "bg-primary",
+            AppointmentStatus.CanceledByPatient => "bg-warning text-dark",
+            AppointmentStatus.CanceledByClinic => "bg-danger",
+            _ => "bg-secondary"
+        };
     }
 }

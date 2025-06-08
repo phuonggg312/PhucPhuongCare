@@ -1,0 +1,99 @@
+﻿@page "/my-appointments/detail/{AppointmentId:int}"
+@attribute [Authorize]
+
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.UseCases.AppointmentsUseCases
+@using System.Security.Claims
+
+@inject IAdminViewAppointmentDetailUseCase ViewAppointmentDetailUseCase
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Chi tiết Lịch hẹn</PageTitle>
+
+@if (appointment == null)
+{
+    @if (isLoading)
+    {
+        <p><em>Đang tải...</em></p>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+}
+else
+{
+    <h3>Chi tiết Lịch hẹn ngày @appointment.TimeSlot?.SlotDateTime.ToString("dd/MM/yyyy")</h3>
+    <button class="btn btn-secondary my-3" @onclick="GoBack">&laquo; Quay lại Danh sách</button>
+    <hr />
+
+    <dl class="row">
+        <dt class="col-sm-3">Bác sĩ:</dt>
+        <dd class="col-sm-9">@appointment.Doctor?.FullName</dd>
+
+        <dt class="col-sm-3">Chuyên khoa:</dt>
+        <dd class="col-sm-9">@appointment.Doctor?.Specialty?.Name</dd>
+
+        <dt class="col-sm-3">Thời gian:</dt>
+        <dd class="col-sm-9">@appointment.TimeSlot?.SlotDateTime.ToString("HH:mm")</dd>
+
+        <dt class="col-sm-3">Trạng thái:</dt>
+        <dd class="col-sm-9">@GetVietnameseStatus(appointment.Status)</dd>
+
+        <dt class="col-sm-3">Lý do khám:</dt>
+        <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(appointment.ReasonForVisit) ? "(Không có)" : appointment.ReasonForVisit)</dd>
+
+        <dt class="col-sm-3">Ghi chú của bác sĩ:</dt>
+        <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(appointment.DoctorNotes) ? "(Chưa có)" : appointment.DoctorNotes)</dd>
+    </dl>
+}
+
+@code {
+    [Parameter]
+    public int AppointmentId { get; set; }
+
+    private Appointment? appointment;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var loggedInUserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // Lấy thông tin lịch hẹn
+        var appt = await ViewAppointmentDetailUseCase.ExecuteAsync(AppointmentId);
+
+        // KIỂM TRA BẢO MẬT: Đảm bảo người dùng chỉ có thể xem lịch hẹn của chính mình
+        if (appt == null || appt.PatientId != loggedInUserId)
+        {
+            errorMessage = "Không tìm thấy lịch hẹn hoặc bạn không có quyền truy cập.";
+        }
+        else
+        {
+            appointment = appt;
+        }
+        isLoading = false;
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/my-appointments");
+    }
+
+    private string GetVietnameseStatus(CoreBusiness.Enums.AppointmentStatus status)
+    {
+        return status switch
+        {
+            CoreBusiness.Enums.AppointmentStatus.PendingConfirmation => "Chờ xác nhận",
+            CoreBusiness.Enums.AppointmentStatus.Confirmed => "Đã xác nhận",
+            CoreBusiness.Enums.AppointmentStatus.Completed => "Đã hoàn thành",
+            CoreBusiness.Enums.AppointmentStatus.CanceledByPatient => "Bạn đã hủy",
+            CoreBusiness.Enums.AppointmentStatus.CanceledByClinic => "Phòng khám hủy",
+            CoreBusiness.Enums.AppointmentStatus.NoShow => "Không đến",
+            _ => status.ToString()
+        };
+    }
+}

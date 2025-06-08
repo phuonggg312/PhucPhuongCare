@@ -14,9 +14,26 @@ namespace PhucPhuongCare.DataStore.EFCore.Repositories
         }
 
 
-        public async Task AddScheduleAsync(DoctorSchedule schedule)
+        public async Task SaveScheduleAsync(DoctorSchedule schedule)
         {
-            await _context.DoctorSchedules.AddAsync(schedule);
+            // Tìm xem đã có lịch cho ngày này của bác sĩ này chưa
+            var existingSchedule = await _context.DoctorSchedules
+                .FirstOrDefaultAsync(s => s.DoctorId == schedule.DoctorId && s.DayOfWeek == schedule.DayOfWeek);
+
+            if (existingSchedule == null)
+            {
+                // Nếu CHƯA có, thì THÊM MỚI
+                _context.DoctorSchedules.Add(schedule);
+            }
+            else
+            {
+                // Nếu ĐÃ có, thì CẬP NHẬT thông tin
+                existingSchedule.StartTime = schedule.StartTime;
+                existingSchedule.EndTime = schedule.EndTime;
+                existingSchedule.SlotDurationMinutes = schedule.SlotDurationMinutes;
+                existingSchedule.IsActive = schedule.IsActive;
+            }
+
             await _context.SaveChangesAsync();
         }
 

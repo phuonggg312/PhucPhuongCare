@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PhucPhuongCare.DataStore.EFCore;
 using PhucPhuongCare.DataStore.EFCore.Repositories;
@@ -16,10 +16,10 @@ using PhucPhuongCare.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// L?y chu?i k?t n?i
+// Lấy chuỗi kết nối
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// C?u h�nh DbContext
+// Cấu hình DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
 
@@ -27,25 +27,25 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString,
         b => b.MigrationsAssembly("PhucPhuongCare.DataStore.EFCore")));
 
-// C?u h�nh Identity v� Roles
+// Cấu hình Identity và Roles
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// C?u h�nh ?? chia s? cookie ??ng nh?p
+// Cấu hình để chia sẻ cookie đăng nhập
 builder.Services.AddAuthentication()
     .AddCookie(options => {
         options.Cookie.Name = ".PhucPhuongCare.SharedCookie";
         options.Cookie.Path = "/";
     });
 
-// C?u h�nh Data Protection ?? 2 app c� th? gi?i m� cookie c?a nhau
+// Cấu hình Data Protection để 2 app có thể giải mã cookie của nhau
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(@"D:\temp-keys\"))
     .SetApplicationName("PhucPhuongCareShared");
 
-// ??ng k� Repositories
+// Đăng ký Repositories
 builder.Services.AddTransient<ISpecialtyRepository, SpecialtyRepository>();
 builder.Services.AddTransient<IDoctorRepository, DoctorRepository>();
 builder.Services.AddTransient<IDoctorScheduleRepository, DoctorScheduleRepository>();
@@ -55,7 +55,7 @@ builder.Services.AddTransient<IPatientProfileRepository, PatientProfileRepositor
 builder.Services.AddTransient<IUserRepository, UserRepository>();
 
 
-// ??ng k� Use Cases
+// Đăng ký Use Cases
 builder.Services.AddTransient<IViewSpecialtiesUseCase, ViewSpecialtiesUseCase>();
 builder.Services.AddTransient<IViewDoctorsBySpecialtyUseCase, ViewDoctorsBySpecialtyUseCase>();
 builder.Services.AddTransient<IViewDoctorByIdUseCase, ViewDoctorByIdUseCase>();
@@ -69,9 +69,10 @@ builder.Services.AddTransient<IAdminDeleteScheduleUseCase, AdminDeleteScheduleUs
 builder.Services.AddTransient<IGenerateTimeSlotsUseCase, GenerateTimeSlotsUseCase>();
 builder.Services.AddTransient<IAdminViewAllAppointmentsUseCase, AdminViewAllAppointmentsUseCase>();
 builder.Services.AddTransient<IAdminViewPatientInfoUseCase, AdminViewPatientInfoUseCase>();
-
-
-// C�c d?ch v? m?c ??nh c?a Blazor
+builder.Services.AddTransient<IAdminCancelAppointmentUseCase, AdminCancelAppointmentUseCase>();
+builder.Services.AddTransient<IAdminMarkAsCompletedUseCase, AdminMarkAsCompletedUseCase>();
+builder.Services.AddTransient<IAdminViewAppointmentDetailUseCase, AdminViewAppointmentDetailUseCase>();
+// Các dịch vụ mặc định của Blazor
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
@@ -88,7 +89,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// Th�m 2 d�ng quan tr?ng n�y v�o
+// Thêm 2 dòng quan trọng này vào
 app.UseAuthentication();
 app.UseAuthorization();
 
