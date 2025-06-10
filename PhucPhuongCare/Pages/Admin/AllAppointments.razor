@@ -1,0 +1,113 @@
+﻿@attribute [Authorize(Roles = "Admin")]
+@page "/admin/appointments"
+@using PhucPhuongCare.UseCases.ViewModels
+@using PhucPhuongCare.CoreBusiness.Enums
+@using PhucPhuongCare.UseCases.AppointmentsUseCases
+@using System.Linq
+@inject IAdminViewAllAppointmentsUseCase AdminViewAllAppointmentsUseCase
+@inject IAdminCancelAppointmentUseCase AdminCancelAppointmentUseCase
+@inject IAdminMarkAsCompletedUseCase AdminMarkAsCompletedUseCase
+
+<PageTitle>Quản lý Lịch hẹn</PageTitle>
+
+<h3>Toàn bộ Lịch hẹn</h3>
+
+@if (allAppointments == null)
+{
+    <p><em>Đang tải dữ liệu...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Bác sĩ</th>
+                <th>Bệnh nhân</th>
+                <th>Ngày giờ hẹn</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var appt in allAppointments)
+            {
+                <tr>
+                    <td>@appt.DoctorName</td>
+
+                    <td><a href="/patients/@appt.PatientId">@appt.PatientFullName</a></td>
+
+                    <td>
+                        <a href="/admin/appointments/detail/@appt.AppointmentId">
+                            @appt.AppointmentTime.ToString("HH:mm, dd/MM/yyyy")
+                        </a>
+                    </td>
+
+                    <td>
+                        <span class="badge @GetStatusClass(appt.Status)">@GetVietnameseStatus(appt.Status)</span>
+                    </td>
+                    <td>
+                        @if (appt.Status == AppointmentStatus.Confirmed)
+                        {
+                            <button class="btn btn-sm btn-primary" @onclick="() => MarkAsCompleted(appt.AppointmentId)">Hoàn thành</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => CancelAppointment(appt.AppointmentId)">Hủy</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<AppointmentViewModel>? allAppointments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAppointments();
+    }
+
+    private async Task LoadAppointments()
+    {
+        var result = await AdminViewAllAppointmentsUseCase.ExecuteAsync();
+        allAppointments = result.ToList();
+        StateHasChanged();
+    }
+
+    private async Task CancelAppointment(int appointmentId)
+    {
+        await AdminCancelAppointmentUseCase.ExecuteAsync(appointmentId);
+        await LoadAppointments();
+    }
+
+    private async Task MarkAsCompleted(int appointmentId)
+    {
+        await AdminMarkAsCompletedUseCase.ExecuteAsync(appointmentId);
+        await LoadAppointments();
+    }
+
+    private string GetStatusClass(AppointmentStatus status)
+    {
+        return status switch
+        {
+            AppointmentStatus.Confirmed => "bg-success",
+            AppointmentStatus.Completed => "bg-primary",
+            AppointmentStatus.CanceledByClinic => "bg-danger",
+            AppointmentStatus.CanceledByPatient => "bg-warning text-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetVietnameseStatus(AppointmentStatus status)
+    {
+        return status switch
+        {
+            AppointmentStatus.Confirmed => "Đã xác nhận",
+            AppointmentStatus.Completed => "Đã hoàn thành",
+            AppointmentStatus.CanceledByClinic => "Phòng khám hủy",
+            AppointmentStatus.CanceledByPatient => "Bệnh nhân hủy",
+            AppointmentStatus.PendingConfirmation => "Chờ xác nhận",
+            AppointmentStatus.NoShow => "Không đến",
+            _ => status.ToString()
+        };
+    }
+}

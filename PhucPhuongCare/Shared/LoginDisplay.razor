@@ -1,13 +1,12 @@
 ﻿<AuthorizeView>
     <Authorized>
-        <a href="/my-profile" class="nav-link">Hồ sơ của tôi</a>
         <a href="Identity/Account/Manage" class="nav-link">Hello, @context.User.Identity?.Name!</a>
-        <form method="post" action="Identity/Account/LogOut">
-            <button type="submit" class="nav-link btn btn-link">Log out</button>
-        </form>
+
+        <a href="Identity/Account/Logout" class="nav-link">Đăng xuất</a>
+
     </Authorized>
     <NotAuthorized>
-        <a href="Identity/Account/Register" class="nav-link">Register</a>
-        <a href="Identity/Account/Login" class="nav-link">Log in</a>
+        <a href="Identity/Account/Register" class="nav-link">Đăng ký</a>
+        <a href="Identity/Account/Login" class="nav-link">Đăng nhập</a>
     </NotAuthorized>
 </AuthorizeView>

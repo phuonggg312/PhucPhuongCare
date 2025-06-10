@@ -1,0 +1,86 @@
+﻿@attribute [Authorize(Roles = "Admin")]
+@page "/admin/appointments/detail/{AppointmentId:int}"
+
+@using PhucPhuongCare.CoreBusiness.Enums
+@using PhucPhuongCare.CoreBusiness.Models
+@using PhucPhuongCare.UseCases.AppointmentsUseCases
+@using PhucPhuongCare.UseCases.PluginInterfaces
+
+@inject IAdminViewAppointmentDetailUseCase AdminViewAppointmentDetailUseCase
+@inject IPatientProfileRepository PatientProfileRepository
+@inject IUserRepository UserRepository
+@inject NavigationManager NavigationManager
+
+<PageTitle>Chi tiết Lịch hẹn</PageTitle>
+
+@if (appointment == null)
+{
+    <p><em>Đang tải...</em></p>
+}
+else
+{
+    <h3>Chi tiết Lịch hẹn #@appointment.Id</h3>
+    <button class="btn btn-secondary my-3" @onclick="GoBack">&laquo; Quay lại Danh sách</button>
+
+    <hr />
+
+    <h5>Thông tin Lịch hẹn</h5>
+    <dl class="row">
+        <dt class="col-sm-3">Bác sĩ:</dt>
+        <dd class="col-sm-9">@appointment.Doctor?.FullName</dd>
+
+        <dt class="col-sm-3">Bệnh nhân:</dt>
+        <dd class="col-sm-9">@patientDisplayName</dd>
+
+        <dt class="col-sm-3">Thời gian:</dt>
+        <dd class="col-sm-9">@appointment.TimeSlot?.SlotDateTime.ToString("HH:mm, dd/MM/yyyy")</dd>
+
+        <dt class="col-sm-3">Trạng thái:</dt>
+        <dd class="col-sm-9">@GetVietnameseStatus(appointment.Status)</dd>
+
+        <dt class="col-sm-3">Lý do khám:</dt>
+        <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(appointment.ReasonForVisit) ? "(Không có)" : appointment.ReasonForVisit)</dd>
+    </dl>
+}
+
+@code {
+    [Parameter]
+    public int AppointmentId { get; set; }
+
+    private Appointment? appointment;
+    private string patientDisplayName = "Đang tải...";
+
+    protected override async Task OnInitializedAsync()
+    {
+        appointment = await AdminViewAppointmentDetailUseCase.ExecuteAsync(AppointmentId);
+
+        if (appointment?.PatientId is { Length: > 0 })
+        {
+            var profile = await PatientProfileRepository.GetProfileByUserIdAsync(appointment.PatientId);
+            var fullName = $"{profile?.LastName} {profile?.FirstName}".Trim();
+
+            patientDisplayName = !string.IsNullOrWhiteSpace(fullName)
+                ? fullName
+                : await UserRepository.GetPatientEmailByIdAsync(appointment.PatientId);
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/admin/appointments");
+    }
+
+    private string GetVietnameseStatus(AppointmentStatus status)
+    {
+        return status switch
+        {
+            AppointmentStatus.Confirmed => "Đã xác nhận",
+            AppointmentStatus.Completed => "Đã hoàn thành",
+            AppointmentStatus.CanceledByClinic => "Phòng khám hủy",
+            AppointmentStatus.CanceledByPatient => "Bệnh nhân hủy",
+            AppointmentStatus.PendingConfirmation => "Chờ xác nhận",
+            AppointmentStatus.NoShow => "Không đến",
+            _ => status.ToString()
+        };
+    }
+}

@@ -1,4 +1,9 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">PhucPhuongCare</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -21,11 +26,6 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/my-appointments">
-                <span class="oi oi-cog" aria-hidden="true"></span> Đăng nhập
-            </NavLink>
-        </div>
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
@@ -33,8 +33,28 @@
                         <span class="oi oi-calendar" aria-hidden="true"></span> Lịch hẹn của tôi
                     </NavLink>
                 </div>
+
+                <AuthorizeView Roles="Admin">
+                    <Authorized Context="adminContext">
+                        <hr />
+                        <div class="nav-item px-3 text-uppercase small text-muted">Quản trị</div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/doctors">
+                                <span class="oi oi-person" aria-hidden="true"></span> Quản lý Bác sĩ
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/appointments">
+                                <span class="oi oi-calendar" aria-hidden="true"></span> Quản lý Lịch hẹn
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
             </Authorized>
         </AuthorizeView>
+
     </nav>
 </div>
 
@@ -46,5 +66,10 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task Logout()
+    {
+        await JS.InvokeVoidAsync("window.location.replace", "/logged-out");
     }
 }
